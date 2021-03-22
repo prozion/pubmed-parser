@@ -1,7 +1,6 @@
 #lang racket
 
 (require odysseus)
-(require odysseus/read/pubmed)
 
 (define cache-path "/home/denis/data/pubmed")
 

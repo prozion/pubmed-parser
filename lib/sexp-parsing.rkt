@@ -1,5 +1,6 @@
 #lang racket
 
+(require odysseus)
 (require "common.rkt")
 (require net/url)
 (require json)
@@ -16,8 +17,14 @@
     (match medline-date-content
       ((pregexp (pregexp "^(.+?) (.+?)-(.+?)$") (list _ year month1 month2))
           (format "~a-~a.~a" (month/abbr->num month1) (month/abbr->num month2) year))
+      ((pregexp (pregexp "^(Spring|Summer|Autumn|Winter) (.+?)$") (list _ season year))
+          (format "~a.~a" (string-downcase season) year))
+      ((pregexp (pregexp "^(\\d{4}) (First Quarter|Second Quarter|Third Quarter|Fourth Quarter)$") (list _ year quarter))
+          (format "~a.~a" (string-downcase (idfy quarter)) year))
+      ((pregexp (pregexp "^(.+?) (Spring|Summer|Autumn|Winter)$") (list _ year season))
+          (format "~a.~a" (string-downcase season) year))
       ((pregexp (pregexp "^(.+?) (.+?)$") (list _ year month1))
-          (format "~a.~a" (month/abbr->num month1)))
+          (format "~a.~a" (month/abbr->num month1) year))
       ((pregexp (pregexp "^(.+?)$") (list _ year))
           (format "~a" year))
       (_ #f))))
@@ -66,18 +73,29 @@
           (authors ($ PubmedArticle.MedlineCitation.Article.AuthorList hxml))
           (authors (filter-not empty-string? (map parse-author authors)))
           (mhs ($xml PubmedArticle.MedlineCitation.MeshHeadingList.MeshHeading.DescriptorName hxml))
+          (keywords ($xml PubmedArticle.MedlineCitation.KeywordList.Keyword hxml))
           (doi (get-index 'doi hxml))
           (pmc (get-index 'pmc hxml))
           )
-      (hash 'pmid pmid 'date date 'journal journal 'title title 'abstract abstract 'authors authors 'mhs mhs 'doi doi
-            (when pmc 'pmc) (when pmc pmc))))
+      (hash 'pmid pmid 'dt date 'jou journal 't title 'abs abstract 'au authors 'mhs mhs 'kw keywords 'doi doi 'pmc pmc)))
   (let* (
         (xml (dehtmlify xml))
-        (sxml (ssax:xml->sxml (open-input-string xml) empty))
-        (res (sxml->hxml sxml))
+        (sxml
+          (benchmark (d "xml->sxml")
+            (ssax:xml->sxml (open-input-string xml) empty))
+            )
+        (res
+          (benchmark (d "sxml->hxml")
+            (sxml->hxml sxml))
+            )
         (res ($ *TOP*.PubmedArticleSet res))
         (res (if (hash? res) (list res) res))
-        (res (take res 1000))
-        (res (map parse-PubmedArticle res))
+        (_ (---  "len:" (length res)))
+        (res
+          (benchmark (d "hxml->short entries")
+            (for/hash
+              ((entry (map parse-PubmedArticle res)))
+              (values ($ pmid entry) entry))
+            ))
         )
     res))
