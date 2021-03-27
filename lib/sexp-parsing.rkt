@@ -68,7 +68,9 @@
                   (medline-date (parse-medline-date medline-date))
                   (else #f)))
           (journal ($xml PubmedArticle.MedlineCitation.Article.Journal.Title hxml))
-          (title ($xml PubmedArticle.MedlineCitation.Article.ArticleTitle hxml))
+          (title (or
+                    ($xml PubmedArticle.MedlineCitation.Article.ArticleTitle hxml)
+                    ($xml PubmedArticle.MedlineCitation.Article.VernacularTitle hxml)))
           (abstract ($xml PubmedArticle.MedlineCitation.Article.Abstract.AbstractText hxml))
           (authors ($ PubmedArticle.MedlineCitation.Article.AuthorList hxml))
           (authors (filter-not empty-string? (map parse-author authors)))

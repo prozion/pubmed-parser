@@ -18,3 +18,16 @@
   (if (string? txt)
     (namefy (string-downcase txt))
     #f))
+
+; clean field from newlines and tabs
+(define-catch (cf field)
+  (and
+    field
+    ((change-text
+      (list
+        (cons "\n" "")
+        (cons "\t" " ")))
+    field)))
+
+(define-catch (chunk-n i)
+  (format-number "dddd" i #:filler "0"))
